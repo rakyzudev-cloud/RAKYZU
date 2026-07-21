@@ -1,85 +1,198 @@
-"use client";
-import { useState, useRef } from "react";
+import Link from "next/link";
+import {
+  Image as ImageIcon,
+  Video,
+  Eraser,
+  Sparkles,
+  RefreshCw,
+  Shield,
+  Zap,
+  Lock,
+  ArrowRight,
+} from "lucide-react";
 
-type Item = { id:string; file:File; size:number; preview:string; blob?:Blob; cSize?:number; status:"ready"|"compressing"|"done" };
+const features = [
+  {
+    title: "Image Compression",
+    description:
+      "Reduce image file size while preserving visual quality. Adjust quality, max dimensions, and output format according to your preferences.",
+    href: "/image-compress",
+    icon: ImageIcon,
+    color: "from-blue-500 to-cyan-500",
+  },
+  {
+    title: "Video Compression",
+    description:
+      "Compress video files up to 500 MB directly in the browser. Control bitrate, resolution, and format with full user control.",
+    href: "/video-compress",
+    icon: Video,
+    color: "from-violet-500 to-purple-500",
+  },
+  {
+    title: "AI Background Removal",
+    description:
+      "Remove image backgrounds with high-quality open-source AI models. Processing stays on your device for complete privacy.",
+    href: "/background-remove",
+    icon: Eraser,
+    color: "from-emerald-500 to-teal-500",
+  },
+  {
+    title: "AI Photo Enhancement",
+    description:
+      "Convert blurry or low-resolution photos into sharper, higher-definition images using open-source AI super-resolution techniques.",
+    href: "/photo-enhance",
+    icon: Sparkles,
+    color: "from-amber-500 to-orange-500",
+  },
+  {
+    title: "Format Conversion",
+    description:
+      "Convert between JPG, PNG, SVG, WebP, and ICO/Favicon formats in either direction. Fast, reliable, and fully local.",
+    href: "/format-convert",
+    icon: RefreshCw,
+    color: "from-rose-500 to-pink-500",
+  },
+];
 
-export default function Page(){
-  const [files,setFiles]=useState<Item[]>([]);
-  const [q,setQ]=useState(80);
-  const [drag,setDrag]=useState(false);
-  const inputRef=useRef<HTMLInputElement>(null);
-  const fmtBytes=(b:number)=> b<1024?`${b}B`: b<1024*1024?`${(b/1024).toFixed(1)}KB`:`${(b/1024/1024).toFixed(2)}MB`;
+const benefits = [
+  {
+    icon: Lock,
+    title: "Privacy First",
+    text: "Every operation runs locally in your browser. Your files never leave your device.",
+  },
+  {
+    icon: Zap,
+    title: "Instant Processing",
+    text: "No upload queues or server delays. Results appear as soon as your device finishes the work.",
+  },
+  {
+    icon: Shield,
+    title: "No Registration",
+    text: "Use every tool freely without creating an account or providing personal information.",
+  },
+];
 
-  const compress=(file:File,quality:number)=>new Promise<Blob>((res,rej)=>{
-    const img=new Image();
-    img.onload=()=>{
-      const c=document.createElement("canvas");
-      c.width=img.width; c.height=img.height;
-      c.getContext("2d")!.drawImage(img,0,0);
-      c.toBlob(b=>b?res(b):rej(),file.type,quality/100);
-    };
-    img.src=URL.createObjectURL(file);
-  });
-
-  const addFiles=async (list:FileList)=>{
-    const newItems:Item[]=Array.from(list).slice(0,20).map(f=>({id:Math.random().toString(36).slice(2),file:f,size:f.size,preview:URL.createObjectURL(f),status:"ready"}));
-    setFiles(p=>[...p,...newItems]);
-    for(const it of newItems){
-      setFiles(p=>p.map(x=>x.id===it.id?{...x,status:"compressing"}:x));
-      const blob=await compress(it.file,q);
-      setFiles(p=>p.map(x=>x.id===it.id?{...x,blob,cSize:blob.size,status:"done"}:x));
-    }
-  };
-
-  return(
-    <div className="min-h-screen bg-[#fcfcfc] text-zinc-900">
-      <header className="h- bg-white border-b border-zinc-100 flex items-center justify-between px-6 md:px-10">
-        <div className="flex items-center gap-2.5"><div className="w-8 h-8 bg-black rounded- flex items-center justify-center text-white font-black text-">R</div><span className="font-semibold tracking-tight">XiaoConvert</span></div>
-        <div className="flex items-center gap-6 text- text-zinc-500"><span>Tools</span><span>Pricing</span><span>About</span><button className="bg-black text-white px-4 py-2 rounded-full">Sign in</button></div>
-      </header>
-
-      <main className="max-w- mx-auto px-6 pt- flex flex-col items-center">
-        <div className="inline-flex items-center gap-2 h-7 px-3 rounded-full border border-zinc-200 bg-white text- text-zinc-600">● New • Now supports AVIF & WebM</div>
-
-        <h1 className="mt-6 text-center text- md:text- font-[800] tracking-[-0.04em] leading-[0.95]">
-          <span className="block text-black">Convert anything,</span>
-          <span className="block text-zinc-300">beautifully.</span>
-        </h1>
-        <p className="mt-4 text-center text- leading-6 text-zinc-500">Fast, private, runs 100% on your device.<br/>No servers, no limits, no watermarks.</p>
-
-        {/* DROP ZONE YANG BENER - 420px DASHED */}
-        <div
-          onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)}
-          onDrop={e=>{e.preventDefault();setDrag(false);e.dataTransfer.files&&addFiles(e.dataTransfer.files)}}
-          className={`group mt-10 w-full max-w- h- rounded- border-[1.5px] border-dashed ${drag?"border-zinc-900 bg-zinc-50":"border-zinc-200 bg-white"} shadow-[0_8px_40px_-16px_rgba(0,0,0,0.12),0_0_0_1px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center px-6 text-center transition-all hover:border-zinc-300 hover:shadow-[0_12px_48px_-16px_rgba(0,0,0,0.16)]`}
-        >
-          <div className="w-11 h-11 rounded- bg-zinc-900 text-white flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">↓</div>
-          <p className="text- font-[600] tracking-[-0.01em]">Drop your files here</p>
-          <p className="mt-1 text-[12.5px] text-zinc-500">JPG, PNG, WEBP, SVG, MP4 • up to 100MB</p>
-          <button onClick={()=>inputRef.current?.click()} className="mt-5 h-8 px-4 rounded-full bg-zinc-900 text-white text- font-medium">Browse files</button>
-          <div className="mt-4 flex items-center gap-1.5 text- text-zinc-400"><span>◒</span> Files never leave your device</div>
-          <input ref={inputRef} type="file" multiple accept="image/*" hidden onChange={e=>e.target.files&&addFiles(e.target.files)} />
-        </div>
-
-        <div className="mt-7 flex items-center gap-2 flex-wrap justify-center">
-          {["No upload","Unlimited","No watermark"].map(t=>(
-            <div key={t} className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-white border border-zinc-200 text-[12.5px] text-zinc-600 shadow-[0_1px_1px_rgba(0,0,0,0.02)]">◉ {t}</div>
-          ))}
-        </div>
-
-        {files.length>0 && (
-          <div className="mt-10 w-full max-w-">
-            <div className="flex justify-between items-center mb-2"><span className="text- font-medium">Quality {q}%</span><input type="range" min={10} max={100} value={q} onChange={e=>setQ(Number(e.target.value))} className="w-32 accent-black" /></div>
-            {files.map(f=>(
-              <div key={f.id} className="mt-2 flex items-center gap-3 p-3 rounded- border bg-white">
-                <img src={f.preview} className="w-11 h-11 rounded- object-cover bg-zinc-100" />
-                <div className="flex-1 text-left"><p className="text- font-medium truncate">{f.file.name}</p><p className="text- text-zinc-500">{fmtBytes(f.size)} → {f.cSize?fmtBytes(f.cSize):"..."}</p></div>
-                {f.blob && <a href={URL.createObjectURL(f.blob)} download={f.file.name} className="px-4 py-2 rounded-full bg-black text-white text-">Download</a>}
-              </div>
-            ))}
+export default function HomePage() {
+  return (
+    <div className="bg-slate-50 dark:bg-slate-950">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-accent-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900" />
+        <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl dark:text-white">
+              <span className="block">Rakyzu Converter</span>
+              <span className="mt-2 block bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
+                Free. Private. Powerful.
+              </span>
+            </h1>
+            <p className="mt-6 text-lg leading-relaxed text-slate-600 dark:text-slate-300">
+              A complete suite of image and video tools that run entirely in your
+              browser. Compress media, remove backgrounds with AI, enhance
+              photos, and convert formats — without ever uploading a single file.
+            </p>
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+              <Link href="/image-compress" className="btn-primary gap-2">
+                Start Compressing
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link href="#features" className="btn-secondary">
+                Explore All Tools
+              </Link>
+            </div>
           </div>
-        )}
-      </main>
+        </div>
+      </section>
+
+      {/* Benefits */}
+      <section className="border-y border-slate-200 bg-white py-12 dark:border-slate-800 dark:bg-slate-900">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-8 sm:grid-cols-3">
+            {benefits.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.title} className="flex items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-950 dark:text-primary-400">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 dark:text-white">
+                      {item.title}
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                      {item.text}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Grid */}
+      <section id="features" className="py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+              All Tools in One Place
+            </h2>
+            <p className="mt-3 text-slate-600 dark:text-slate-400">
+              Select any tool below to begin. Each feature is designed for
+              clarity, control, and complete local processing.
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <Link
+                  key={feature.title}
+                  href={feature.href}
+                  className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-soft transition-all hover:-translate-y-1 hover:shadow-card dark:border-slate-700 dark:bg-slate-800"
+                >
+                  <div
+                    className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${feature.color} text-white shadow-md`}
+                  >
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 group-hover:text-primary-600 dark:text-white dark:group-hover:text-primary-400">
+                    {feature.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                    {feature.description}
+                  </p>
+                  <div className="mt-4 flex items-center text-sm font-medium text-primary-600 dark:text-primary-400">
+                    Open tool
+                    <ArrowRight className="ml-1 h-4 w-4 transition group-hover:translate-x-1" />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Call to Action */}
+      <section className="border-t border-slate-200 bg-gradient-to-r from-primary-600 to-accent-600 py-16 dark:border-slate-800">
+        <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
+          <h2 className="text-2xl font-bold text-white sm:text-3xl">
+            Ready to process your media?
+          </h2>
+          <p className="mt-3 text-primary-100">
+            Choose a tool and start converting instantly. No sign-up, no
+            uploads, no limits beyond your device capabilities.
+          </p>
+          <Link
+            href="/image-compress"
+            className="mt-8 inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-sm font-semibold text-primary-700 shadow-lg transition hover:bg-primary-50"
+          >
+            Get Started
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
