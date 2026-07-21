@@ -2,11 +2,11 @@
 
 **Rakyzu Converter** is a free, privacy-first, browser-based web application for image and video processing. All operations execute locally in the user's browser. No files are uploaded to any remote server.
 
-## Features (Planned / In Progress)
+## Features
 
-1. **Website Foundation** – Complete branding, navigation, responsive layout, and homepage under the name **Rakyzu Converter**.
-2. **Image Compression** – Adjustable quality, dimensions, and format preferences.
-3. **Video Compression** – User-configurable settings, maximum file size 500 MB.
+1. **Website Foundation** – Complete branding, navigation, responsive layout, and homepage under the name **Rakyzu Converter**. ✅
+2. **Image Compression** – Adjustable quality, dimensions, target size, and output format preferences. Full client-side processing with multi-file support. ✅
+3. **Video Compression** – User-configurable settings, maximum file size 500 MB. (Next)
 4. **AI HD Background Removal** – Open-source AI models running client-side.
 5. **AI Photo Enhancement** – Convert blurry photos to higher definition using open-source AI.
 6. **Format Conversion** – Bidirectional conversion among JPG, PNG, SVG, WebP, and ICO/Favicon.
