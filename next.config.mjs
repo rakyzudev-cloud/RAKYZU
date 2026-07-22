@@ -2,7 +2,6 @@
 const nextConfig = {
   reactStrictMode: true,
   webpack: (config) => {
-    // Required for ffmpeg.wasm and some AI libs
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
@@ -11,13 +10,13 @@ const nextConfig = {
     };
     return config;
   },
-  // Increase body size limit for large uploads if using server actions later
   experimental: {
     serverActions: {
       bodySizeLimit: '550mb',
     },
   },
-  // Required for FFmpeg.wasm (SharedArrayBuffer / multi-threading)
+  // Use the more compatible "credentialless" policy so FFmpeg core
+  // can be loaded from a CDN without being blocked.
   async headers() {
     return [
       {
@@ -29,7 +28,7 @@ const nextConfig = {
           },
           {
             key: 'Cross-Origin-Embedder-Policy',
-            value: 'require-corp',
+            value: 'credentialless',
           },
         ],
       },
