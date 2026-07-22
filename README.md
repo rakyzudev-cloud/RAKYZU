@@ -6,7 +6,7 @@
 
 1. **Website Foundation** – Complete branding, navigation, responsive layout, and homepage under the name **Rakyzu Converter**. ✅
 2. **Image Compression** – Adjustable quality, dimensions, target size, and output format preferences. Full client-side processing with multi-file support. ✅
-3. **Video Compression** – User-configurable settings, maximum file size 500 MB. (Next)
+3. **Video Compression** – User-configurable settings, maximum file size 500 MB. Client-side FFmpeg.wasm. ✅
 4. **AI HD Background Removal** – Open-source AI models running client-side.
 5. **AI Photo Enhancement** – Convert blurry photos to higher definition using open-source AI.
 6. **Format Conversion** – Bidirectional conversion among JPG, PNG, SVG, WebP, and ICO/Favicon.
