@@ -211,10 +211,19 @@ export function VideoCompressor() {
           await ffmpeg.deleteFile(outputName);
         } catch {}
       } catch (err) {
-        const message =
-          err instanceof Error
-            ? err.message
-            : "Video compression failed. The file may be unsupported or too complex for the browser.";
+        console.error("FFmpeg error:", err);
+        let message = "Video compression failed.";
+        if (err instanceof Error) {
+          message = err.message;
+          // Surface common root causes more clearly
+          if (message.includes("SharedArrayBuffer") || message.includes("cross-origin") || message.includes("COOP") || message.includes("COEP")) {
+            message = "Browser security headers are missing (Cross-Origin Isolation). Please redeploy after the latest next.config.mjs update.";
+          } else if (message.includes("fetch") || message.includes("network") || message.includes("Failed to fetch")) {
+            message = "Failed to download the FFmpeg engine. Check your network or try again.";
+          } else if (message.includes("Out of memory") || message.includes("memory")) {
+            message = "The browser ran out of memory. Try a smaller video or lower resolution settings.";
+          }
+        }
         setResult((prev) =>
           prev ? { ...prev, status: "error", error: message, progress: 0 } : prev
         );
