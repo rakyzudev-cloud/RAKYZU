@@ -86,7 +86,17 @@ export function ImageCompressor() {
       };
 
       try {
-        const compressionOpts: imageCompression.Options = {
+        // Options object for browser-image-compression.
+        // Explicit library type is avoided because the package's type declarations
+        // do not consistently export a named 'Options' member across versions.
+        const compressionOpts: {
+          maxSizeMB: number;
+          maxWidthOrHeight: number;
+          useWebWorker: boolean;
+          initialQuality: number;
+          alwaysKeepResolution: boolean;
+          fileType?: string;
+        } = {
           maxSizeMB: options.maxSizeMB,
           maxWidthOrHeight: options.maxWidthOrHeight,
           useWebWorker: options.useWebWorker,
