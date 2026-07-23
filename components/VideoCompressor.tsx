@@ -112,11 +112,11 @@ export function VideoCompressor() {
     });
 
     try {
-      // Load from our own domain (same-origin) – most reliable method
-      await ffmpeg.load({
-        coreURL: "/ffmpeg/ffmpeg-core.js",
-        wasmURL: "/ffmpeg/ffmpeg-core.wasm",
-      });
+      const baseURL = `${window.location.origin}/ffmpeg`;
+      const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript");
+      const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm");
+
+      await ffmpeg.load({ coreURL, wasmURL });
       return ffmpeg;
     } catch (err) {
       console.error("FFmpeg load error:", err);
