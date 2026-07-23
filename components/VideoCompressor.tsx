@@ -115,8 +115,9 @@ export function VideoCompressor() {
       const baseURL = `${window.location.origin}/ffmpeg`;
       const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript");
       const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm");
+      const classWorkerURL = await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, "text/javascript");
 
-      await ffmpeg.load({ coreURL, wasmURL });
+      await ffmpeg.load({ coreURL, wasmURL, classWorkerURL });
       return ffmpeg;
     } catch (err) {
       console.error("FFmpeg load error:", err);
