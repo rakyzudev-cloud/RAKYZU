@@ -115,9 +115,8 @@ export function VideoCompressor() {
       const baseURL = `${window.location.origin}/ffmpeg`;
       const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript");
       const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm");
-      const classWorkerURL = await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, "text/javascript");
-
-      await ffmpeg.load({ coreURL, wasmURL, classWorkerURL });
+      const workerURL = await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, "text/javascript");
+await ffmpeg.load({ coreURL, wasmURL, workerURL });
       return ffmpeg;
     } catch (err) {
       console.error("FFmpeg load error:", err);
@@ -200,6 +199,9 @@ export function VideoCompressor() {
         if (scale) args.push("-vf", scale);
 
         args.push("-y", outputName);
+
+const threadCount = Math.max(1, (navigator.hardwareConcurrency || 4) - 1);
+args.push("-threads", String(threadCount));
 
         await ffmpeg.exec(args);
 
