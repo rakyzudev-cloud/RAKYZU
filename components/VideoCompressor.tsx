@@ -81,17 +81,22 @@ export function VideoCompressor() {
   const [result, setResult] = useState<VideoResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const ffmpegRef = useRef<FFmpeg | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const ffmpegPromiseRef = useRef<Promise<FFmpeg> | null>(null);
+const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateOption = <K extends keyof VideoOptions>(key: K, value: VideoOptions[K]) => {
     setOptions((prev) => ({ ...prev, [key]: value }));
   };
 
       const loadFFmpeg = useCallback(async () => {
-    if (ffmpegRef.current?.loaded) {
-      return ffmpegRef.current;
-    }
+  if (ffmpegRef.current?.loaded) {
+    return ffmpegRef.current;
+  }
+  if (ffmpegPromiseRef.current) {
+    return ffmpegPromiseRef.current;
+  }
 
+  ffmpegPromiseRef.current = (async () => {
     setResult((prev) =>
       prev
         ? { ...prev, status: "loading-ffmpeg", log: "Loading video engine…", progress: 0 }
@@ -116,9 +121,11 @@ export function VideoCompressor() {
       const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript");
       const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm");
       const workerURL = await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, "text/javascript");
-await ffmpeg.load({ coreURL, wasmURL, workerURL });
+      await ffmpeg.load({ coreURL, wasmURL, workerURL });
       return ffmpeg;
     } catch (err) {
+      ffmpegPromiseRef.current = null;
+      ffmpegRef.current = null;
       console.error("FFmpeg load error:", err);
       throw new Error(
         err instanceof Error
@@ -126,7 +133,10 @@ await ffmpeg.load({ coreURL, wasmURL, workerURL });
           : "Failed to load video engine. Please refresh and try again."
       );
     }
-  }, []);
+  })();
+
+  return ffmpegPromiseRef.current;
+}, []);
 
   const processVideo = useCallback(
     async (file: File) => {
