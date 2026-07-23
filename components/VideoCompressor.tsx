@@ -87,14 +87,14 @@ export function VideoCompressor() {
     setOptions((prev) => ({ ...prev, [key]: value }));
   };
 
-    const loadFFmpeg = useCallback(async () => {
+      const loadFFmpeg = useCallback(async () => {
     if (ffmpegRef.current?.loaded) {
       return ffmpegRef.current;
     }
 
     setResult((prev) =>
       prev
-        ? { ...prev, status: "loading-ffmpeg", log: "Downloading video engine…", progress: 0 }
+        ? { ...prev, status: "loading-ffmpeg", log: "Loading video engine…", progress: 0 }
         : prev
     );
 
@@ -112,11 +112,10 @@ export function VideoCompressor() {
     });
 
     try {
-      // Use a reliable CDN + toBlobURL so the files become same-origin blobs
-      const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm";
+      // Load from our own domain (same-origin) – most reliable method
       await ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+        coreURL: "/ffmpeg/ffmpeg-core.js",
+        wasmURL: "/ffmpeg/ffmpeg-core.wasm",
       });
       return ffmpeg;
     } catch (err) {
