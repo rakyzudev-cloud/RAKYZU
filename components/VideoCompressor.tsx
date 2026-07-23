@@ -120,11 +120,32 @@ const fileInputRef = useRef<HTMLInputElement>(null);
 
     try {
       const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd";
+
 const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript");
 const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm");
 const workerURL = await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, "text/javascript");
-      await ffmpeg.load({ coreURL, wasmURL, workerURL });
-      return ffmpeg;
+
+console.log("=== BEFORE LOAD ===");
+console.log({
+  crossOriginIsolated: window.crossOriginIsolated,
+  SharedArrayBuffer: typeof SharedArrayBuffer,
+  Atomics: typeof Atomics,
+  hardwareConcurrency: navigator.hardwareConcurrency,
+});
+
+console.time("ffmpeg.load");
+
+await ffmpeg.load({
+  coreURL,
+  wasmURL,
+  workerURL,
+});
+
+console.timeEnd("ffmpeg.load");
+
+console.log("=== AFTER LOAD ===");
+
+return ffmpeg;
     } catch (err) {
       ffmpegPromiseRef.current = null;
       ffmpegRef.current = null;
