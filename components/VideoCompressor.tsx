@@ -88,6 +88,8 @@ const fileInputRef = useRef<HTMLInputElement>(null);
     setOptions((prev) => ({ ...prev, [key]: value }));
   };
 
+    // force rebuild 2026-07-24
+    
       const loadFFmpeg = useCallback(async () => {
   if (ffmpegRef.current?.loaded) {
     return ffmpegRef.current;
