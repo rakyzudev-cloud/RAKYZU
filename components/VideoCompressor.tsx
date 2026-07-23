@@ -119,7 +119,7 @@ const fileInputRef = useRef<HTMLInputElement>(null);
     });
 
     try {
-      const baseURL = "https://unpkg.com/@ffmpeg/core-mt@0.12.10/dist/umd";
+      const baseURL = "https://unpkg.com/@ffmpeg/core-mt@0.12.10/dist/umd?t=" + Date.now();
 const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript");
 const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm");
 const workerURL = await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, "text/javascript");
