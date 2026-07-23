@@ -118,9 +118,9 @@ const fileInputRef = useRef<HTMLInputElement>(null);
 
     try {
       const baseURL = `${window.location.origin}/ffmpeg`;
-      const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js?v=mt-0.12.10`, "text/javascript");
-      const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm?v=mt-0.12.10`, "application/wasm");
-      const workerURL = await toBlobURL(`${baseURL}/ffmpeg-core.worker.js?v=mt-0.12.10`, "text/javascript");
+      const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core-mt.js?v=1`, "text/javascript");
+      const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core-mt.wasm?v=1`, "application/wasm");
+      const workerURL = await toBlobURL(`${baseURL}/ffmpeg-core-mt.worker.js?v=1`, "text/javascript");
       await ffmpeg.load({ coreURL, wasmURL, workerURL });
       return ffmpeg;
     } catch (err) {
