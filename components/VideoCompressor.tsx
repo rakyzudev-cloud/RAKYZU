@@ -206,7 +206,11 @@ return ffmpeg;
         const outputExt = options.format === "webm" ? "webm" : "mp4";
         const outputName = "output." + outputExt;
 
-        await ffmpeg.writeFile(inputName, await fetchFile(file));
+        console.log("1. BEFORE writeFile");
+
+await ffmpeg.writeFile(inputName, await fetchFile(file));
+
+console.log("2. AFTER writeFile");
 
         const args: string[] = ["-i", inputName];
 
@@ -236,9 +240,21 @@ return ffmpeg;
 const threadCount = Math.max(1, (navigator.hardwareConcurrency || 4) - 1);
 args.push("-threads", String(threadCount));
 
-        await ffmpeg.exec(args);
+        console.log("3. BEFORE exec");
+console.log(args);
 
-        const data = await ffmpeg.readFile(outputName);
+console.time("ffmpeg.exec");
+
+await ffmpeg.exec(args);
+
+console.timeEnd("ffmpeg.exec");
+console.log("4. AFTER exec");
+
+        console.log("5. BEFORE readFile");
+
+const data = await ffmpeg.readFile(outputName);
+
+console.log("6. AFTER readFile", data);
         const mime = options.format === "webm" ? "video/webm" : "video/mp4";
         // @ts-expect-error Uint8Array buffer
         const blob = new Blob([data.buffer], { type: mime });
