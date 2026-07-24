@@ -81,27 +81,14 @@ export function VideoCompressor() {
   const [result, setResult] = useState<VideoResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const ffmpegRef = useRef<FFmpeg | null>(null);
-const ffmpegPromiseRef = useRef<Promise<FFmpeg> | null>(null);
-const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateOption = <K extends keyof VideoOptions>(key: K, value: VideoOptions[K]) => {
     setOptions((prev) => ({ ...prev, [key]: value }));
   };
 
-      const loadFFmpeg = useCallback(async () => {
-  if (ffmpegRef.current?.loaded) {
-    return ffmpegRef.current;
-  }
-  if (ffmpegPromiseRef.current) {
-    return ffmpegPromiseRef.current;
-  }
-
-  ffmpegPromiseRef.current = (async () => {
-    setResult((prev) =>
-      prev
-        ? { ...prev, status: "loading-ffmpeg", log: "Loading video engine…", progress: 0 }
-        : prev
-    );
+  const loadFFmpeg = useCallback(async () => {
+    if (ffmpegRef.current?.loaded) return ffmpegRef.current;
 
     const ffmpeg = new FFmpeg();
     ffmpegRef.current = ffmpeg;
@@ -116,27 +103,14 @@ const fileInputRef = useRef<HTMLInputElement>(null);
       );
     });
 
-    try {
-      const baseURL = `${window.location.origin}/ffmpeg`;
-      const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core-mt.js?v=1`, "text/javascript");
-      const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core-mt.wasm?v=1`, "application/wasm");
-      const workerURL = await toBlobURL(`${baseURL}/ffmpeg-core-mt.worker.js?v=1`, "text/javascript");
-      await ffmpeg.load({ coreURL, wasmURL, workerURL });
-      return ffmpeg;
-    } catch (err) {
-      ffmpegPromiseRef.current = null;
-      ffmpegRef.current = null;
-      console.error("FFmpeg load error:", err);
-      throw new Error(
-        err instanceof Error
-          ? `Failed to load video engine: ${err.message}`
-          : "Failed to load video engine. Please refresh and try again."
-      );
-    }
-  })();
+    const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
+    await ffmpeg.load({
+      coreURL: await toBlobURL(baseURL + "/ffmpeg-core.js", "text/javascript"),
+      wasmURL: await toBlobURL(baseURL + "/ffmpeg-core.wasm", "application/wasm"),
+    });
 
-  return ffmpegPromiseRef.current;
-}, []);
+    return ffmpeg;
+  }, []);
 
   const processVideo = useCallback(
     async (file: File) => {
@@ -209,9 +183,6 @@ const fileInputRef = useRef<HTMLInputElement>(null);
         if (scale) args.push("-vf", scale);
 
         args.push("-y", outputName);
-
-const threadCount = Math.max(1, (navigator.hardwareConcurrency || 4) - 1);
-args.push("-threads", String(threadCount));
 
         await ffmpeg.exec(args);
 
