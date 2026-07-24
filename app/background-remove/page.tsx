@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
-import { BackgroundRemover } from "@/components/BackgroundRemover";
+import dynamic from "next/dynamic";
+
+const BackgroundRemover = dynamic(
+  () => import("@/components/BackgroundRemover").then((m) => m.BackgroundRemover),
+  { ssr: false }
+);
 
 export const metadata: Metadata = {
   title: "AI Background Removal",
   description:
-    "Remove image backgrounds with high-quality open-source AI. Processing runs entirely in your browser for complete privacy. Download transparent PNG results.",
+    "Remove image backgrounds with high-quality open-source AI. Processing runs entirely in your browser for complete privacy.",
 };
 
 export default function BackgroundRemovePage() {
