@@ -74,7 +74,8 @@ export function BackgroundRemover() {
     });
 
     try {
-      const blob = await removeBackground(file, {
+  const { removeBackground } = await import("@imgly/background-removal");
+  const blob = await removeBackground(file, {
         // progress callback
         progress: (key, current, total) => {
           if (total > 0) {
