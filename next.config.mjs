@@ -2,51 +2,56 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // Tell Next.js not to try to bundle these packages on the server
-  serverExternalPackages: [
-    "@imgly/background-removal",
-    "onnxruntime-web",
-  ],
+  experimental: {
+    // Correct key for Next.js 14
+    serverComponentsExternalPackages: [
+      "@imgly/background-removal",
+      "onnxruntime-web",
+    ],
+    serverActions: {
+      bodySizeLimit: "550mb",
+    },
+  },
 
   webpack: (config, { isServer }) => {
-    // Existing fallbacks
+    // Fallbacks needed for browser-only libraries
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
       path: false,
       crypto: false,
+      module: false,
     };
 
-    // Support WebAssembly (required by onnxruntime-web)
+    // Prevent Node-only packages from being bundled
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      sharp$: false,
+      "onnxruntime-node$": false,
+    };
+
+    // WebAssembly support
     config.experiments = {
       ...config.experiments,
       asyncWebAssembly: true,
       layers: true,
     };
 
-    // Treat .wasm files as assets
+    // Treat .wasm as static assets
     config.module.rules.push({
       test: /\.wasm$/,
       type: "asset/resource",
     });
 
-    // Prevent Webpack from trying to parse certain ONNX / WASM helper files as JS modules
-    if (!isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-      };
-    }
+    // Ignore problematic ONNX helper files that Webpack tries to parse as JS
+    config.module.rules.push({
+      test: /ort.*\.js$/,
+      type: "javascript/auto",
+    });
 
     return config;
   },
 
-  experimental: {
-    serverActions: {
-      bodySizeLimit: "550mb",
-    },
-  },
-
-  // Keep the headers that helped with FFmpeg
   async headers() {
     return [
       {
