@@ -81,7 +81,7 @@ export function BackgroundRemover() {
               setResult((prev) => (prev ? { ...prev, progress: pct } : prev));
             }
           },
-          model: "medium",
+          model: "isnet_fp16",
           output: {
             format: "image/png",
             quality: 0.9,
