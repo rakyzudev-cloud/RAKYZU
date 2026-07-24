@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { removeBackground } from "@imgly/background-removal";
 import {
   Upload,
   Download,
@@ -9,307 +10,275 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
+  Image as ImageIcon,
   Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-declare global {
-  interface Window {
-    SelfieSegmentation: any;
-    Module?: any;
-  }
-}
-
-interface ResultState {
-  originalFile: File | null;
-  originalPreview: string | null;
-  resultPreview: string | null;
+interface RemovalResult {
+  originalFile: File;
+  originalPreview: string;
   resultBlob: Blob | null;
-  status: "idle" | "loading-model" | "processing" | "done" | "error";
+  resultPreview: string | null;
+  originalSize: number;
+  resultSize: number | null;
   error: string | null;
+  status: "idle" | "processing" | "done" | "error";
   progress: number;
 }
 
-export function BackgroundRemover() {
-  const [state, setState] = useState<ResultState>({
-    originalFile: null,
-    originalPreview: null,
-    resultPreview: null,
-    resultBlob: null,
-    status: "idle",
-    error: null,
-    progress: 0,
-  });
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+}
 
+export function BackgroundRemover() {
+  const [result, setResult] = useState<RemovalResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const selfieSegmentationRef = useRef<any>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Load MediaPipe Selfie Segmentation from CDN
-  useEffect(() => {
-    const loadMediaPipe = async () => {
-      if (typeof window === "undefined") return;
-      if (window.SelfieSegmentation) return;
-
-      setState((s) => ({ ...s, status: "loading-model", progress: 10 }));
-
-      // Load the required scripts
-      const loadScript = (src: string) =>
-        new Promise<void>((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = src;
-          script.crossOrigin = "anonymous";
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error(`Failed to load ${src}`));
-          document.head.appendChild(script);
+  const processImage = useCallback(
+    async (file: File) => {
+      if (!file.type.startsWith("image/")) {
+        setResult({
+          originalFile: file,
+          originalPreview: "",
+          resultBlob: null,
+          resultPreview: null,
+          originalSize: file.size,
+          resultSize: null,
+          error: "Please select a valid image file (JPG, PNG, WebP, etc.).",
+          status: "error",
+          progress: 0,
         });
+        return;
+      }
+
+      if (result?.originalPreview) URL.revokeObjectURL(result.originalPreview);
+      if (result?.resultPreview) URL.revokeObjectURL(result.resultPreview);
+
+      const originalPreview = URL.createObjectURL(file);
+      setResult({
+        originalFile: file,
+        originalPreview,
+        resultBlob: null,
+        resultPreview: null,
+        originalSize: file.size,
+        resultSize: null,
+        error: null,
+        status: "processing",
+        progress: 0,
+      });
 
       try {
-        await loadScript("https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js");
-        await loadScript("https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js");
-        await loadScript("https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js");
-        await loadScript("https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js");
-
-        setState((s) => ({ ...s, status: "idle", progress: 0 }));
-      } catch (err) {
-        console.error(err);
-        setState((s) => ({
-          ...s,
-          status: "error",
-          error: "Failed to load AI model. Please refresh the page.",
-        }));
-      }
-    };
-
-    loadMediaPipe();
-  }, []);
-
-  const processImage = useCallback(async (file: File) => {
-    if (!window.SelfieSegmentation) {
-      setState((s) => ({
-        ...s,
-        status: "error",
-        error: "AI model is still loading. Please wait a few seconds and try again.",
-      }));
-      return;
-    }
-
-    const originalPreview = URL.createObjectURL(file);
-    setState({
-      originalFile: file,
-      originalPreview,
-      resultPreview: null,
-      resultBlob: null,
-      status: "processing",
-      error: null,
-      progress: 20,
-    });
-
-    try {
-      const img = new Image();
-      img.src = originalPreview;
-      await new Promise((resolve) => (img.onload = resolve));
-
-      // Create canvas
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(img, 0, 0);
-
-      setState((s) => ({ ...s, progress: 40 }));
-
-      // Initialize Selfie Segmentation
-      const selfieSegmentation = new window.SelfieSegmentation({
-        locateFile: (file: string) =>
-          `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`,
-      });
-
-      selfieSegmentation.setOptions({
-        modelSelection: 1, // 0 = general, 1 = landscape (better quality)
-      });
-
-      await new Promise<void>((resolve) => {
-        selfieSegmentation.onResults((results: any) => {
-          // Create output with transparent background
-          const outCanvas = document.createElement("canvas");
-          outCanvas.width = img.width;
-          outCanvas.height = img.height;
-          const outCtx = outCanvas.getContext("2d")!;
-
-          // Draw the segmentation mask
-          outCtx.drawImage(results.segmentationMask, 0, 0, outCanvas.width, outCanvas.height);
-
-          // Use the mask to keep only the person
-          outCtx.globalCompositeOperation = "source-in";
-          outCtx.drawImage(img, 0, 0);
-
-          outCanvas.toBlob(
-            (blob) => {
-              if (blob) {
-                const resultPreview = URL.createObjectURL(blob);
-                setState((s) => ({
-                  ...s,
-                  resultBlob: blob,
-                  resultPreview,
-                  status: "done",
-                  progress: 100,
-                }));
-              }
-              resolve();
-            },
-            "image/png"
-          );
+        const blob = await removeBackground(file, {
+          progress: (key, current, total) => {
+            if (total > 0) {
+              const pct = Math.min(Math.round((current / total) * 100), 99);
+              setResult((prev) => (prev ? { ...prev, progress: pct } : prev));
+            }
+          },
+          model: "medium",
+          output: {
+            format: "image/png",
+            quality: 0.9,
+          },
         });
 
-        selfieSegmentation.send({ image: img });
-      });
-    } catch (err) {
-      console.error(err);
-      setState((s) => ({
-        ...s,
-        status: "error",
-        error: err instanceof Error ? err.message : "Background removal failed.",
-      }));
-    }
+        const resultPreview = URL.createObjectURL(blob);
+
+        setResult((prev) =>
+          prev
+            ? {
+                ...prev,
+                resultBlob: blob,
+                resultPreview,
+                resultSize: blob.size,
+                status: "done",
+                progress: 100,
+              }
+            : prev
+        );
+      } catch (err) {
+        console.error("Background removal error:", err);
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Background removal failed. Please try a different image.";
+        setResult((prev) =>
+          prev ? { ...prev, status: "error", error: message, progress: 0 } : prev
+        );
+      }
+    },
+    [result]
+  );
+
+  const handleFile = useCallback((file: File) => processImage(file), [processImage]);
+
+  const onDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      setIsDragging(false);
+      const file = e.dataTransfer.files?.[0];
+      if (file) handleFile(file);
+    },
+    [handleFile]
+  );
+
+  const onDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
   }, []);
 
-  const handleFile = (file: File) => {
-    if (!file.type.startsWith("image/")) return;
-    processImage(file);
+  const onDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+    e.target.value = "";
   };
 
-  const clear = () => {
-    if (state.originalPreview) URL.revokeObjectURL(state.originalPreview);
-    if (state.resultPreview) URL.revokeObjectURL(state.resultPreview);
-    setState({
-      originalFile: null,
-      originalPreview: null,
-      resultPreview: null,
-      resultBlob: null,
-      status: "idle",
-      error: null,
-      progress: 0,
-    });
+  const clearResult = () => {
+    if (result?.originalPreview) URL.revokeObjectURL(result.originalPreview);
+    if (result?.resultPreview) URL.revokeObjectURL(result.resultPreview);
+    setResult(null);
   };
 
-  const download = () => {
-    if (!state.resultBlob) return;
+  const downloadResult = () => {
+    if (!result?.resultBlob) return;
+    const url = URL.createObjectURL(result.resultBlob);
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(state.resultBlob);
-    a.download = `no-bg-${state.originalFile?.name.replace(/\.[^.]+$/, "") || "image"}.png`;
+    a.href = url;
+    const baseName = result.originalFile.name.replace(/\.[^.]+$/, "");
+    a.download = "no-bg-" + baseName + ".png";
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
+
+  const isBusy = result?.status === "processing";
 
   return (
     <div className="space-y-8">
       <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-800/50 dark:bg-emerald-950/40 dark:text-emerald-200">
         <Info className="mt-0.5 h-5 w-5 shrink-0" />
         <div>
-          <p className="font-medium">AI Background Removal (MediaPipe – Open Source)</p>
+          <p className="font-medium">AI Background Removal (open-source model)</p>
           <p className="mt-1 opacity-90">
-            Uses Google’s MediaPipe Selfie Segmentation model. Best results with photos of people.
-            Everything runs locally in your browser.
+            Works with any subject — people, products, logos, and objects. Everything runs locally in your browser.
           </p>
         </div>
       </div>
 
-      {state.status === "idle" && !state.originalPreview && (
+      {!result && (
         <div
-          onDrop={(e) => {
-            e.preventDefault();
-            setIsDragging(false);
-            const file = e.dataTransfer.files?.[0];
-            if (file) handleFile(file);
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragging(true);
-          }}
-          onDragLeave={() => setIsDragging(false)}
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
           onClick={() => fileInputRef.current?.click()}
           className={cn(
             "relative cursor-pointer rounded-2xl border-2 border-dashed p-12 text-center transition-all",
             isDragging
-              ? "border-primary-500 bg-primary-50"
-              : "border-slate-300 bg-white hover:border-primary-400 dark:border-slate-600 dark:bg-slate-800"
+              ? "border-primary-500 bg-primary-50 dark:bg-primary-950/30"
+              : "border-slate-300 bg-white hover:border-primary-400 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:hover:border-primary-500"
           )}
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleFile(file);
-            }}
-          />
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-            <Eraser className="h-8 w-8" />
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={onFileSelect} className="hidden" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary-50 text-primary-600 dark:bg-primary-950 dark:text-primary-400">
+            <Upload className="h-8 w-8" />
           </div>
-          <h3 className="mt-4 text-lg font-semibold">Drop an image here or click to browse</h3>
-          <p className="mt-2 text-sm text-slate-500">
-            Best results with clear photos of people. Output is a transparent PNG.
-          </p>
+          <h3 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">Drop an image here or click to browse</h3>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Supported: JPG, PNG, WebP, and most common formats.</p>
         </div>
       )}
 
-      {(state.status === "loading-model" || state.status === "processing" || state.status === "done" || state.status === "error") && (
+      {result && (
         <div className="card space-y-6">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              {state.status === "loading-model" && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading AI model…
+              {result.status === "processing" && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Processing… {result.progress}%
                 </span>
               )}
-              {state.status === "processing" && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Processing… {state.progress}%
-                </span>
-              )}
-              {state.status === "done" && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+              {result.status === "done" && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                   <CheckCircle2 className="h-3.5 w-3.5" /> Completed
                 </span>
               )}
-              {state.status === "error" && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-700">
+              {result.status === "error" && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-300">
                   <AlertCircle className="h-3.5 w-3.5" /> Failed
                 </span>
               )}
             </div>
-            <button onClick={clear} className="btn-secondary gap-2 text-sm">
+            <button type="button" onClick={clearResult} className="btn-secondary gap-2 text-sm" disabled={isBusy}>
               <X className="h-4 w-4" /> Clear
             </button>
           </div>
 
-          {state.status === "error" && state.error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              {state.error}
+          {result.status === "processing" && (
+            <div>
+              <div className="mb-1 flex justify-between text-xs text-slate-500">
+                <span>Removing background…</span>
+                <span>{result.progress}%</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                <div className="h-full rounded-full bg-primary-600 transition-all duration-300" style={{ width: result.progress + "%" }} />
+              </div>
+            </div>
+          )}
+
+          {result.status === "error" && result.error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300">
+              {result.error}
             </div>
           )}
 
           <div className="grid gap-6 lg:grid-cols-2">
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500">Original</p>
-              {state.originalPreview && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={state.originalPreview} alt="Original" className="w-full rounded-xl object-contain bg-slate-100" />
-              )}
-            </div>
-            <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500">Background Removed</p>
-              <div className="relative aspect-video rounded-xl overflow-hidden bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjZWVlIi8+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiNlZWUiLz48cmVjdCB4PSIxMCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjY2NjIi8+PHJlY3QgeT0iMTAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iI2NjYyIvPjwvc3ZnPg==')]">
-                {state.resultPreview ? (
+              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500">
+                Original — {formatBytes(result.originalSize)}
+              </p>
+              <div className="overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-900">
+                {result.originalPreview && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={state.resultPreview} alt="Result" className="w-full h-full object-contain" />
+                  <img src={result.originalPreview} alt="Original" className="w-full object-contain" />
+                )}
+              </div>
+              <p className="mt-2 truncate text-sm text-slate-600 dark:text-slate-400">{result.originalFile.name}</p>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500">
+                Background removed
+                {result.resultSize != null && " — " + formatBytes(result.resultSize)}
+              </p>
+              <div
+                className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(45deg, #e5e7eb 25%, transparent 25%), linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)",
+                  backgroundSize: "20px 20px",
+                  backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
+                }}
+              >
+                {result.status === "done" && result.resultPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={result.resultPreview} alt="Background removed" className="h-full w-full object-contain" />
                 ) : (
-                  <div className="flex h-full items-center justify-center">
-                    {(state.status === "processing" || state.status === "loading-model") && (
-                      <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
+                  <div className="flex h-full w-full items-center justify-center bg-slate-100/60 dark:bg-slate-900/60">
+                    {isBusy && <Loader2 className="h-10 w-10 animate-spin text-primary-600" />}
+                    {result.status === "error" && <AlertCircle className="h-10 w-10 text-red-500" />}
+                    {result.status !== "processing" && result.status !== "error" && (
+                      <ImageIcon className="h-10 w-10 text-slate-300 dark:text-slate-700" />
                     )}
                   </div>
                 )}
@@ -317,13 +286,22 @@ export function BackgroundRemover() {
             </div>
           </div>
 
-          {state.status === "done" && state.resultBlob && (
+          {result.status === "done" && result.resultBlob && (
             <div className="flex justify-end">
-              <button onClick={download} className="btn-primary gap-2">
+              <button type="button" onClick={downloadResult} className="btn-primary gap-2">
                 <Download className="h-4 w-4" /> Download PNG (Transparent)
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {!result && (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-900/50">
+          <Eraser className="mx-auto h-10 w-10 text-slate-400" />
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+            Drop or select an image. The first run will download the AI model (~20-80 MB depending on quality) and cache it for future use.
+          </p>
         </div>
       )}
     </div>
