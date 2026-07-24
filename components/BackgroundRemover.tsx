@@ -75,16 +75,19 @@ export function BackgroundRemover() {
 
       try {
       const blob = await removeBackground(file, {
-        publicPath: "https://static.imgly.com/@imgly/background-removal-data/1.5.5/dist/",
-        progress: (key: string, current: number, total: number) => {
-          setProgressText(`${key}: ${Math.round((current / total) * 100)}%`);
-        },
-        model: "isnet_fp16",
-        output: {
-          format: "image/png",
-          quality: 0.9,
-        },
-      });
+  progress: (key, current, total) => {
+    if (total > 0) {
+      const pct = Math.min(Math.round((current / total) * 100), 99);
+      setResult((prev) => (prev ? { ...prev, progress: pct } : prev));
+    }
+  },
+  model: "isnet_fp16",
+  publicPath: "https://staticimgly.com/@imgly/background-removal-data/1.5.5/dist/",
+  output: {
+    format: "image/png",
+    quality: 0.9,
+  },
+});
 
         const resultPreview = URL.createObjectURL(blob);
 
@@ -170,7 +173,7 @@ export function BackgroundRemover() {
         <div>
           <p className="font-medium">AI Background Removal (open-source model)</p>
           <p className="mt-1 opacity-90">
-            Works with any subject — people, products, logos, and objects. Everything runs locally in your browser.
+            Works with any subject â€” people, products, logos, and objects. Everything runs locally in your browser.
           </p>
         </div>
       </div>
@@ -203,7 +206,7 @@ export function BackgroundRemover() {
             <div className="flex items-center gap-2">
               {result.status === "processing" && (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Processing… {result.progress}%
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Processingâ€¦ {result.progress}%
                 </span>
               )}
               {result.status === "done" && (
@@ -225,7 +228,7 @@ export function BackgroundRemover() {
           {result.status === "processing" && (
             <div>
               <div className="mb-1 flex justify-between text-xs text-slate-500">
-                <span>Removing background…</span>
+                <span>Removing backgroundâ€¦</span>
                 <span>{result.progress}%</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
@@ -243,7 +246,7 @@ export function BackgroundRemover() {
           <div className="grid gap-6 lg:grid-cols-2">
             <div>
               <p className="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500">
-                Original — {formatBytes(result.originalSize)}
+                Original â€” {formatBytes(result.originalSize)}
               </p>
               <div className="overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-900">
                 {result.originalPreview && (
@@ -257,7 +260,7 @@ export function BackgroundRemover() {
             <div>
               <p className="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500">
                 Background removed
-                {result.resultSize != null && " — " + formatBytes(result.resultSize)}
+                {result.resultSize != null && " â€” " + formatBytes(result.resultSize)}
               </p>
               <div
                 className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl"
