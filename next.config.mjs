@@ -43,10 +43,10 @@ const nextConfig = {
       type: "asset/resource",
     });
 
-    // Ignore problematic ONNX helper files that Webpack tries to parse as JS
+    // Jangan pernah bundle/minify ulang file onnxruntime — perlakukan sebagai asset mentah
     config.module.rules.push({
-      test: /ort.*\.js$/,
-      type: "javascript/auto",
+      test: /onnxruntime-web.*\.(m?js)$/,
+      type: "asset/resource",
     });
 
     return config;
