@@ -35,6 +35,28 @@ function formatBytes(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
+async function normalizeImage(file: File): Promise<Blob> {
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  try {
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = url;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, 0, 0);
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Canvas encode failed"))), "image/png");
+    });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export function BackgroundRemover() {
   const [result, setResult] = useState<RemovalResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -74,7 +96,8 @@ export function BackgroundRemover() {
       });
 
       try {
-        const blob = await removeBackground(file, {
+        const cleanBlob = await normalizeImage(file);
+        const blob = await removeBackground(cleanBlob, {
           progress: (key, current, total) => {
             if (total > 0) {
               const pct = Math.min(Math.round((current / total) * 100), 99);
