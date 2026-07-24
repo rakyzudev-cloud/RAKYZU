@@ -74,12 +74,17 @@ export function BackgroundRemover() {
       });
 
       try {
-        const blob = await removeBackground(file, { 
-  publicPath: "https://staticimgly.com/@imgly/background-removal-data/1.5.5/dist/",
-  progress: (key, current, total) => { ... }, 
-  model: "isnet_fp16", 
-  output: { format: "image/png", quality: 0.9, }, 
-});
+      const blob = await removeBackground(file, {
+        publicPath: "https://static.imgly.com/@imgly/background-removal-data/1.5.5/dist/",
+        progress: (key: string, current: number, total: number) => {
+          setProgressText(`${key}: ${Math.round((current / total) * 100)}%`);
+        },
+        model: "isnet_fp16",
+        output: {
+          format: "image/png",
+          quality: 0.9,
+        },
+      });
 
         const resultPreview = URL.createObjectURL(blob);
 
