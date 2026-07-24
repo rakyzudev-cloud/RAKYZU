@@ -3,13 +3,13 @@ import dynamic from "next/dynamic";
 
 const BackgroundRemover = dynamic(
   () => import("@/components/BackgroundRemover").then((m) => m.BackgroundRemover),
-  { ssr: false }
+  { ssr: false, loading: () => <p className="text-center py-20">Loading AI tool…</p> }
 );
 
 export const metadata: Metadata = {
   title: "AI Background Removal",
   description:
-    "Remove image backgrounds with high-quality open-source AI. Processing runs entirely in your browser for complete privacy.",
+    "Remove image backgrounds with open-source AI (MediaPipe). Processing runs entirely in your browser for complete privacy.",
 };
 
 export default function BackgroundRemovePage() {
@@ -21,9 +21,9 @@ export default function BackgroundRemovePage() {
             AI Background Removal
           </h1>
           <p className="mt-3 text-lg text-slate-600 dark:text-slate-400">
-            Remove backgrounds from images using open-source AI models that run
-            entirely in your browser. No files are uploaded. Download the result
-            as a transparent PNG.
+            Remove backgrounds from images using Google’s open-source MediaPipe
+            AI model. Everything runs locally in your browser — no files are
+            uploaded.
           </p>
         </div>
 
