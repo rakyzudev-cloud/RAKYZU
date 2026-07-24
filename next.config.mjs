@@ -3,13 +3,18 @@ const nextConfig = {
   reactStrictMode: true,
 
   experimental: {
+    // Correct key for Next.js 14
+    serverComponentsExternalPackages: [
+      "@imgly/background-removal",
+      "onnxruntime-web",
+    ],
     serverActions: {
       bodySizeLimit: "550mb",
     },
   },
 
-  webpack: (config) => {
-    // Required for FFmpeg.wasm and browser-only libraries
+  webpack: (config, { isServer }) => {
+    // Fallbacks needed for browser-only libraries
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
@@ -18,36 +23,43 @@ const nextConfig = {
       module: false,
     };
 
-    // Support WebAssembly
+    // Prevent Node-only packages from being bundled
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      sharp$: false,
+      "onnxruntime-node$": false,
+    };
+
+    // WebAssembly support
     config.experiments = {
       ...config.experiments,
       asyncWebAssembly: true,
       layers: true,
     };
 
-    // Treat .wasm files as static assets
+    // Treat .wasm as static assets
     config.module.rules.push({
       test: /\.wasm$/,
       type: "asset/resource",
     });
 
+    // Ignore problematic ONNX helper files that Webpack tries to parse as JS
+    // (fixed: regex now also matches .mjs files, not just .js)
+    config.module.rules.push({
+      test: /ort.*\.m?js$/,
+      type: "javascript/auto",
+    });
+
     return config;
   },
 
-  // Required for FFmpeg.wasm (SharedArrayBuffer)
   async headers() {
     return [
       {
         source: "/:path*",
         headers: [
-          {
-            key: "Cross-Origin-Opener-Policy",
-            value: "same-origin",
-          },
-          {
-            key: "Cross-Origin-Embedder-Policy",
-            value: "credentialless",
-          },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          { key: "Cross-Origin-Embedder-Policy", value: "credentialless" },
         ],
       },
     ];
