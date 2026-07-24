@@ -3,17 +3,13 @@ const nextConfig = {
   reactStrictMode: true,
 
   experimental: {
-    serverComponentsExternalPackages: [
-      "@imgly/background-removal",
-      "onnxruntime-web",
-    ],
     serverActions: {
       bodySizeLimit: "550mb",
     },
   },
 
-  webpack: (config, { isServer }) => {
-    // Fallbacks needed for browser-only libraries
+  webpack: (config) => {
+    // Required for FFmpeg.wasm and browser-only libraries
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
@@ -22,45 +18,36 @@ const nextConfig = {
       module: false,
     };
 
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      sharp$: false,
-      "onnxruntime-node$": false,
-    };
-
+    // Support WebAssembly
     config.experiments = {
       ...config.experiments,
       asyncWebAssembly: true,
       layers: true,
     };
 
+    // Treat .wasm files as static assets
     config.module.rules.push({
       test: /\.wasm$/,
       type: "asset/resource",
     });
 
-    // JANGAN pernah bundle package AI ini sama sekali.
-    // Biarkan jadi require() runtime murni, gak pernah masuk graph webpack.
-    if (!isServer) {
-      config.externals = [
-        ...(Array.isArray(config.externals) ? config.externals : []),
-        {
-          "onnxruntime-web": "commonjs onnxruntime-web",
-          "@imgly/background-removal": "commonjs @imgly/background-removal",
-        },
-      ];
-    }
-
     return config;
   },
 
+  // Required for FFmpeg.wasm (SharedArrayBuffer)
   async headers() {
     return [
       {
         source: "/:path*",
         headers: [
-          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-          { key: "Cross-Origin-Embedder-Policy", value: "credentialless" },
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin",
+          },
+          {
+            key: "Cross-Origin-Embedder-Policy",
+            value: "credentialless",
+          },
         ],
       },
     ];
