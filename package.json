@@ -15,7 +15,8 @@
     "browser-image-compression": "^2.0.2",
     "@ffmpeg/ffmpeg": "^0.12.10",
     "@ffmpeg/util": "^0.12.1",
-    "@imgly/background-removal": "^1.5.5",
+    "@imgly/background-removal": "1.5.5",
+    "onnxruntime-web": "1.21.0-dev.20250114-228dd16893",
     "lucide-react": "^0.424.0",
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.4.0"
