@@ -82,7 +82,7 @@ export function BackgroundRemover() {
     }
   },
   model: "isnet_fp16",
-  publicPath: "https://staticimgly.com/@imgly/background-removal-data/1.5.5/dist/",
+  publicPath: "https://static.imgly.com/@imgly/background-removal-data/1.5.5/dist/",
   output: {
     format: "image/png",
     quality: 0.9,
