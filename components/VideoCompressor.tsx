@@ -87,8 +87,16 @@ export function VideoCompressor() {
     setOptions((prev) => ({ ...prev, [key]: value }));
   };
 
-  const loadFFmpeg = useCallback(async () => {
-    if (ffmpegRef.current?.loaded) return ffmpegRef.current;
+    const loadFFmpeg = useCallback(async () => {
+    if (ffmpegRef.current?.loaded) {
+      return ffmpegRef.current;
+    }
+
+    setResult((prev) =>
+      prev
+        ? { ...prev, status: "loading-ffmpeg", log: "Loading video engine…", progress: 0 }
+        : prev
+    );
 
     const ffmpeg = new FFmpeg();
     ffmpegRef.current = ffmpeg;
@@ -103,13 +111,21 @@ export function VideoCompressor() {
       );
     });
 
-    const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
-    await ffmpeg.load({
-      coreURL: await toBlobURL(baseURL + "/ffmpeg-core.js", "text/javascript"),
-      wasmURL: await toBlobURL(baseURL + "/ffmpeg-core.wasm", "application/wasm"),
-    });
-
-    return ffmpeg;
+    try {
+      // Load from our own domain (same-origin) – most reliable method
+      await ffmpeg.load({
+        coreURL: "/ffmpeg/ffmpeg-core.js",
+        wasmURL: "/ffmpeg/ffmpeg-core.wasm",
+      });
+      return ffmpeg;
+    } catch (err) {
+      console.error("FFmpeg load error:", err);
+      throw new Error(
+        err instanceof Error
+          ? `Failed to load video engine: ${err.message}`
+          : "Failed to load video engine. Please refresh and try again."
+      );
+    }
   }, []);
 
   const processVideo = useCallback(
